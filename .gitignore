@@ -1,0 +1,9 @@
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+
+# Sensitive credentials
+credentials/terraform.tfvars
+terraform.tfvars
+auto.tfvars

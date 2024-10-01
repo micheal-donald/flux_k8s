@@ -1,0 +1,59 @@
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    # Step 1: Fetch kubeconfig file for the AKS cluster.
+    - name: Fetch kubeconfig file
+      command: az aks get-credentials --resource-group aks-free-tier-rg --name aks-free-tier-cluster
+      register: fetch_kubeconfig
+      ignore_errors: yes
+
+    # Step 2: Ensure that the kubectl command is configured correctly.
+    - name: Ensure kubectl is configured
+      command: kubectl config view
+      register: kubeconfig_view
+
+    # Step 3: Check if Flux is already installed.
+    # This task registers 'flux_installed' to determine if further actions are necessary.
+    - name: Check if Flux is installed
+      command: flux --version
+      register: flux_installed
+      ignore_errors: yes
+
+    # Step 4: Download Flux CLI only if it is not installed.
+    # Conditional on 'flux_installed' returning an error (Flux not installed).
+    - name: Download Flux CLI
+      get_url:
+        url: https://github.com/fluxcd/flux2/releases/download/v0.33.0/flux_0.33.0_linux_amd64.tar.gz
+        dest: /tmp/flux.tar.gz
+      when: flux_installed.rc != 0
+      register: download_flux
+
+    # Step 5: Extract Flux CLI binary to the appropriate location only if the download was successful.
+    - name: Extract Flux CLI
+      unarchive:
+        src: /tmp/flux.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+      when: download_flux is defined and download_flux is changed
+
+    # Step 6: Check if Flux installation was successful.
+    # Run this after installing or if Flux was already present.
+    - name: Validate Flux installation
+      command: flux --version
+      register: flux_version
+      when: flux_installed.rc == 0 or (download_flux is defined and download_flux is changed)
+
+    # Step 7: Bootstrap Flux to the AKS cluster with GitOps configuration.
+    # This will clone the specified repository, apply manifests, and deploy Flux.
+    - name: Bootstrap Flux to the AKS cluster
+      shell: |
+        flux bootstrap github \
+          --owner=<GITHUB_USERNAME> \
+          --repository=<GITHUB_REPO> \
+          --branch=main \
+          --path=clusters/my-cluster \
+          --personal
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'HOME') }}/.kube/config"
+      when: flux_version.rc == 0  # Ensure this runs only if Flux is successfully installed or verified.
