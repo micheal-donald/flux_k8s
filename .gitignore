@@ -4,7 +4,8 @@ terraform.tfstate
 terraform.tfstate.backup
 
 # Sensitive credentials
-credentials\terraform.tfvars
+credentials/terraform.tfvars
 terraform.tfvars
 auto.tfvars
-ansible\vars.yaml
+ansible/vars.yaml
+vars.yaml
