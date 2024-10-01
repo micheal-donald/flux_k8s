@@ -7,3 +7,4 @@ terraform.tfstate.backup
 credentials/terraform.tfvars
 terraform.tfvars
 auto.tfvars
+ansible/vars.yaml

@@ -1,6 +1,8 @@
 ---
 - hosts: localhost
   gather_facts: no
+  vars_files:
+    - vars.yaml
   tasks:
     # Step 1: Fetch kubeconfig file for the AKS cluster.
     - name: Fetch kubeconfig file
@@ -49,11 +51,12 @@
     - name: Bootstrap Flux to the AKS cluster
       shell: |
         flux bootstrap github \
-          --owner=<GITHUB_USERNAME> \
-          --repository=<GITHUB_REPO> \
-          --branch=main \
-          --path=clusters/my-cluster \
+          --owner=micheal-donald \
+          --repository=flux_k8s \
+          --branch=master \
+          --path=clusters/staging \
           --personal
       environment:
         KUBECONFIG: "{{ lookup('env', 'HOME') }}/.kube/config"
+        GITHUB_TOKEN: "{{ GITHUB_TOKEN }}"
       when: flux_version.rc == 0  # Ensure this runs only if Flux is successfully installed or verified.
