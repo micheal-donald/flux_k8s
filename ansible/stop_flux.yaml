@@ -1,0 +1,35 @@
+---
+- hosts: localhost
+  gather_facts: no
+  vars_files:
+    - vars.yaml
+  tasks:
+    # Step 1: Fetch kubeconfig file for the AKS cluster.
+    - name: Fetch kubeconfig file
+      command: az aks get-credentials --resource-group aks-free-tier-rg --name aks-free-tier-cluster
+      register: fetch_kubeconfig
+      ignore_errors: yes
+
+    # Step 2: Ensure that the kubectl command is configured correctly.
+    - name: Ensure kubectl is configured
+      command: kubectl config view
+      register: kubeconfig_view
+
+    # Step 3: Check if Flux is installed in the AKS cluster.
+    - name: Check if Flux components are installed
+      shell: kubectl get deployment -n flux-system
+      register: flux_components
+      ignore_errors: yes
+
+    # Step 4: Stop Flux by scaling down its deployments in the flux-system namespace.
+    # This step will run only if Flux components are found in the previous step.
+    - name: Stop Flux by scaling down deployments
+      shell: kubectl scale --replicas=0 deployment --all -n flux-system
+      when: flux_components.rc == 0
+
+    # Step 5: Verify if Flux has been stopped.
+    - name: Verify Flux is stopped
+      shell: kubectl get deployment -n flux-system
+      register: flux_status
+      failed_when: "'0/0' not in flux_status.stdout"
+      ignore_errors: yes
